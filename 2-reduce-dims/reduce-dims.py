@@ -165,7 +165,7 @@ def mode_ftr_analysis(ftr_corr, prefix:str, data_labels, cutoff0 = 0.9, cutoff=0
         #top_indices.append()
 
     unique_indices = np.unique(top_indices)
-    unique_vals = [top_vals[i, :] for i in unique_indices]
+    unique_vals = [top_vals[i, :] for i in np.array(unique_indices)]
     unique_labels = data_labels[unique_indices]
 
 
