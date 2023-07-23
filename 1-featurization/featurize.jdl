@@ -1,0 +1,22 @@
+universe = vanilla
+executable = /scratch365/mfarrugi/HMGR/500ns/analysis/pyemma-msm/1-featurization/condor-featurize.sh
+
+should_transfer_files = IF_NEEDED
+when_to_transfer_output = on_exit
+transfer_input_files = /scratch365/mfarrugi/HMGR/500ns/analysis/pyemma-msm/1-featurization/pyemma-featurize.py
+
+Log = /scratch365/mfarrugi/HMGR/500ns/analysis/pyemma-msm/1-featurization/$(Cluster).log
+Output = /scratch365/mfarrugi/HMGR/500ns/analysis/pyemma-msm/1-featurization/$(Cluster).out
+Error = /scratch365/mfarrugi/HMGR/500ns/analysis/pyemma-msm/1-featurization/$(Cluster).err
+
+environment = OMP_NUM_THREADS=32; #LD_LIBRARY_PATH=/opt/crc/intel/14.0/lib/intel64
+#request_gpus = 1
+request_memory = 400 Gb
+request_cpus = 32
+
+
+
+
+#running
+queue
+
