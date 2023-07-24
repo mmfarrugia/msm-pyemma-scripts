@@ -60,8 +60,8 @@ def heatmap(data, row_labels, col_labels, ax=None,
     cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
 
     # Show all ticks and label them with the respective list entries.
-    ax.set_xticks(np.arange(data.shape[1]), labels=col_labels)
-    ax.set_yticks(np.arange(data.shape[0]), labels=row_labels)
+    ax.set_xticks(np.arange(len(data[0])), labels=col_labels)
+    ax.set_yticks(np.arange(len(data)), labels=row_labels)
 
     # Let the horizontal axes labeling appear on top.
     ax.tick_params(top=True, bottom=False,
@@ -74,8 +74,8 @@ def heatmap(data, row_labels, col_labels, ax=None,
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
 
-    ax.set_xticks(np.arange(data.shape[1]+1)-.5, minor=True)
-    ax.set_yticks(np.arange(data.shape[0]+1)-.5, minor=True)
+    ax.set_xticks(np.arange(len(data[0])+1)-.5, minor=True)
+    ax.set_yticks(np.arange(len(data)+1)-.5, minor=True)
     ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
     ax.tick_params(which="minor", bottom=False, left=False)
 
@@ -127,15 +127,15 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
 
     # Get the formatter in case a string is supplied
     if isinstance(valfmt, str):
-        valfmt = matplotlib.ticker.StrMethodFormatter(valfmt)
+        valfmt = mpl.ticker.StrMethodFormatter(valfmt)
 
     # Loop over the data and create a `Text` for each "pixel".
     # Change the text's color depending on the data.
     texts = []
-    for i in range(data.shape[0]):
-        for j in range(data.shape[1]):
+    for i in range(len(data)):
+        for j in range(len(data[0])):
             kw.update(color=textcolors[int(im.norm(data[i, j]) > threshold)])
-            text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
+            text = im.axes.text(j, i, "{:.1f}".format(data[i, j]), **kw)
             texts.append(text)
 
     return texts
@@ -165,12 +165,12 @@ def mode_ftr_analysis(ftr_corr, prefix:str, data_labels, cutoff0 = 0.9, cutoff=0
         #top_indices.append()
 
     unique_indices = np.unique(top_indices)
-    unique_vals = [top_vals[i, :] for i in np.array(unique_indices)]
-    unique_labels = data_labels[unique_indices]
+    unique_vals = [ftr_corr[i,:] for i in unique_indices]
+    unique_labels = [data_labels[i] for i in unique_indices]
 
 
-    im, cbar = heatmap(unique_vals, unique_labels, range(num_modes), ax=ax, cbarlabel="contribution")
-    texts = annotate_heatmap(im, unique_vals, valfmt="{x:.1f}", textcolors="white")
+    im, cbar = heatmap(np.array(unique_vals), unique_labels, range(num_modes), ax=ax, cbarlabel="contribution")
+    texts = annotate_heatmap(im, np.array(unique_vals), valfmt="{x:.1f}")
     fig.tight_layout()
     plt.show()
 
@@ -194,7 +194,7 @@ def run_pca(data, dims, data_label:str, data_labels):
         pca = pyemma.coordinates.pca(torsions, dim=dims)
     pca_output = pca.get_output()
     if dims < 1:
-        n_dims = pca.ndims
+        n_dims = pca.ndim
     else:
         n_dims = dims
     prefix = 'pca_d'+str(n_dims)+'_'+data_label
@@ -240,7 +240,7 @@ torsions_T = np.asarray(torsions_concatenated).T
 #print("lens "+str(len(torsions_T))+" "+str(len(torsions_T[0])))
 
 run_pca(torsions[:2], 4, 'torsions', data_labels = torsion_labels)
-run_pca(torsions[:2], 0.9, 'torsions', data_labels = torsion_labels)
+run_pca(torsions[:2], 0.6, 'torsions', data_labels = torsion_labels)
 
 # DISTANCES
 
