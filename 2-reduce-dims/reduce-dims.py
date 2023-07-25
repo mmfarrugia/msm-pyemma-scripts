@@ -147,7 +147,7 @@ def mode_ftr_analysis(ftr_corr, prefix:str, data_labels, cutoff0 = 0.9, cutoff=0
     
     num_modes = len(ftr_corr[0])
     
-    fig,ax = plt.subplots(figsize[10,10]) 
+    fig,ax = plt.subplots(figsize=[10,10]) 
     
     top_indices = []
     top_vals = []
@@ -319,8 +319,8 @@ torsions_T = np.asarray(torsions_concatenated).T
 #print("shape "+str(np.shape(torsions_T)))
 #print("lens "+str(len(torsions_T))+" "+str(len(torsions_T[0])))
 
-run_pca(torsions, 10, 'torsions', data_labels = torsion_labels)
-run_pca(torsions, 0.70, 'torsions', data_labels= torsion_labels)
+run_pca(torsions, 'torsions', data_labels = torsion_labels, dims=10)
+run_pca(torsions, 'torsions', data_labels= torsion_labels, dims=0.70)
 
 for dim_item in dim_list:
     for lag_item in lag_list:
@@ -341,8 +341,8 @@ distances_T = np.asarray(distances).T
 #print("shape "+str(np.shape(distances_T)))
 #print("lens "+str(len(distances_T))+" "+str(len(distances_T[0])))#
 
-run_pca(distances, 10, 'jl2', data_labels = distance_labels)
-run_pca(distances, 0.70, 'jl2', data_labels = distance_labels)
+run_pca(distances, 'jl2', data_labels = distance_labels, dims=10)
+run_pca(distances, 'jl2', data_labels = distance_labels, dims=0.70)
 for dim_item in dim_list:
     for lag_item in lag_list:
         run_tica(distances, 'jl2', data_labels = distance_labels, dims=dim_item, lag=lag_item)
