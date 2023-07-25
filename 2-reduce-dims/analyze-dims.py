@@ -25,6 +25,8 @@ config.show_progress_bars = False
 ftr_timestep = 0.200
 lag_list = [5, 10, 50, 500, 1000, 2000, 2400]
 
+ftrzn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/pyemma-msm/2-reduce-dims/'
+
 
 def heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw=None, cbarlabel="", **kwargs):
@@ -177,6 +179,8 @@ def dimensional_analysis(prefix, is_tica:bool, models, num_modes):
     ax.set_ylabel('Implied Timescales' if is_tica else 'VAMP2 Score')
     fig.tight_layout()
     fig.savefig(prefix+'_dim_analysis.png')
+
+    return -1
         
 
 def lag_analysis(model):
@@ -226,7 +230,7 @@ def topN_features_hist(prefix:str):
 
 # Load pca model
 pcaprefix = 'pca_d10_torsions'
-pca = pyemma.load(pcaprefix+'.model')
+pca = pyemma.load(ftrzn_dir+pcaprefix+'.model')
 
 # Load tICA and VAMP models at all timesteps
 tica = list()
@@ -234,37 +238,45 @@ vamp = list()
 for timestep in timesteps:
     param_prefix = 'd10_l_'+str(timestep)+'ns_torsions'
     tica_prefix = 'tica_'+param_prefix
-    tica.append(pyemma.load(tica_prefix+'.model')) 
+    tica.append(pyemma.load(ftrzn_dir+tica_prefix+'.model')) 
     vamp_prefix = 'vamp_'+param_prefix
-    vamp.append(pyemma.load(vamp_prefix+'.model')) 
+    vamp.append(pyemma.load(ftrzn_dir+vamp_prefix+'.model')) 
 
     # Might as well run the comparative analyses which require all 3 while already iterating
     compare_reductions(param_prefix, pca, tica, vamp, n_dims=4)
 
 # Dimensional Analysis
 
-pca_dim = dimensional_analysis()
+#pca_dim = dimensional_analysis('pca_d10', False, pca, 10)
 
-tica_dim = dimensional_analysis()
+tica_dim = dimensional_analysis('tica_d10_torsions', True, tica, 10)
 
-vamp_dim = dimensional_analysis()
+vamp_dim = dimensional_analysis('vamp_d10_torsions', False, vamp, 10)
 
 # Lag Analysis
 
-tica_lag = lag_analysis()
+#tica_lag = lag_analysis()
 
-vamp_lag = lag_analysis()
+#vamp_lag = lag_analysis()
 
 # Mode Cross-sections Analysis
 
-mode_densities(pcaprefix, pca, pca_dim)
-mode_densities(tica_prefix, tica[tica_lag], tica_dim)
-mode_densities(vamp_prefix, vamp[vamp_lag], vamp_dim)
+mode_densities(pcaprefix, pca, 4)
+mode_densities('tica_d10_torsions', tica[5], 4)
+mode_densities('vamp_d10_torsions', vamp[5], 4)
+
+# mode_densities(pcaprefix, pca, pca_dim)
+# mode_densities(tica_prefix, tica[tica_lag], tica_dim)
+# mode_densities(vamp_prefix, vamp[vamp_lag], vamp_dim)
 
 # IC histogram of time spent with trajectory paths overlaid
 
-traj_IC_hist(pcaprefix, pca, pca_dim) 
+traj_IC_hist(pcaprefix, pca, 4) 
 
-traj_IC_hist(tica_prefix, tica[tica_lag], tica_dim)
+traj_IC_hist('tica_d10_torsions', tica[5], 4)
 
-traj_IC_hist(vamp_prefix, vamp[vamp_lag], vamp_dim)
+traj_IC_hist('vamp_d10_torsions', vamp[5], 4)
+
+# traj_IC_hist(pcaprefix, pca, pca_dim) 
+# traj_IC_hist(tica_prefix, tica[tica_lag], tica_dim)
+# traj_IC_hist(vamp_prefix, vamp[vamp_lag], vamp_dim)
