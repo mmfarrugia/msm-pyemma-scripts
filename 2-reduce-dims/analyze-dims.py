@@ -24,7 +24,6 @@ config.show_progress_bars = False
 # iniital md resolution of 50 ps, or 0.05 ns, ftrzn stride of 4, so 200ps or 0.2ns resolution
 ftr_timestep = 0.200
 lag_list = [5, 10, 50, 500, 1000, 2000, 2400]
-dim_list = [2, 4, 5, 10, 0.95]
 
 
 def heatmap(data, row_labels, col_labels, ax=None,
@@ -163,12 +162,27 @@ def compare_reductions(prefix:str, pca_model, tica_model, vamp_model, n_dims:int
     fig.savefig(prefix+'_ftr_hist.png')
 
 
-def dimensional_analysis(model):
-    print()
+def dimensional_analysis(prefix, is_tica:bool, models, num_modes):
+    fig, ax = plt.subplots()
+    for i, timestep in enumerate(timesteps):
+        color = 'C{}'.format(i)
+        if(is_tica):
+            #ax.fill_between(range(num_modes), models[i].timescales, )
+            ax.plot(range(num_modes), models[i].timescales, '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
+        else:
+            ax.plot(range(num_modes), models[i].scores, '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
 
+    ax.legend()
+    ax.set_xlabel('# of dimensions/modes')
+    ax.set_ylabel('Implied Timescales' if is_tica else 'VAMP2 Score')
+    fig.tight_layout()
+    fig.savefig(prefix+'_dim_analysis.png')
+        
 
 def lag_analysis(model):
-    print()
+    for i, timestep in enumerate(timesteps):
+        print()
+    return -1 # Return index of chosen lag time within timesteps/lag_list
 
 
 def mode_densities(prefix:str, model, num_modes:int):
@@ -193,4 +207,64 @@ def traj_IC_hist(prefix:str, model, num_modes:int):
     fig.tight_layout()
     fig.savefig(prefix+'_traj_IC_hist.png')
 
+def subspace_timeseries(prefix:str, pca_concatenated, tica_concatenated, vamp_concatenated):
+    #NOTE: concatenated input should also just be within the subspace to visualize, so already a singular dimension's values (vector basically)
+    fig, ax = plt.subplots(figsize=(10,3))
+    ax.plot(pca_concatenated[:300], label='PCA')
+    ax.plot(tica_concatenated[:300], label='TICA')
+    # check directionality of VAMP for easier visualization
+    ax.plot(vamp_concatenated[:300], label='VAMP')
+    ax.set_xlabel('time / steps')
+    ax.set_ylabel('mode values')
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(prefix+'.png')
 
+def topN_features_hist(prefix:str):
+    print()
+
+
+# Load pca model
+pcaprefix = 'pca_d10_torsions'
+pca = pyemma.load(pcaprefix+'.model')
+
+# Load tICA and VAMP models at all timesteps
+tica = list()
+vamp = list()
+for timestep in timesteps:
+    param_prefix = 'd10_l_'+str(timestep)+'ns_torsions'
+    tica_prefix = 'tica_'+param_prefix
+    tica.append(pyemma.load(tica_prefix+'.model')) 
+    vamp_prefix = 'vamp_'+param_prefix
+    vamp.append(pyemma.load(vamp_prefix+'.model')) 
+
+    # Might as well run the comparative analyses which require all 3 while already iterating
+    compare_reductions(param_prefix, pca, tica, vamp, n_dims=4)
+
+# Dimensional Analysis
+
+pca_dim = dimensional_analysis()
+
+tica_dim = dimensional_analysis()
+
+vamp_dim = dimensional_analysis()
+
+# Lag Analysis
+
+tica_lag = lag_analysis()
+
+vamp_lag = lag_analysis()
+
+# Mode Cross-sections Analysis
+
+mode_densities(pcaprefix, pca, pca_dim)
+mode_densities(tica_prefix, tica[tica_lag], tica_dim)
+mode_densities(vamp_prefix, vamp[vamp_lag], vamp_dim)
+
+# IC histogram of time spent with trajectory paths overlaid
+
+traj_IC_hist(pcaprefix, pca, pca_dim) 
+
+traj_IC_hist(tica_prefix, tica[tica_lag], tica_dim)
+
+traj_IC_hist(vamp_prefix, vamp[vamp_lag], vamp_dim)
