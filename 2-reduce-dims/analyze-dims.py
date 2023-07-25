@@ -171,14 +171,26 @@ def lag_analysis(model):
     print()
 
 
-def plot_IC_densities(prefix:str, model, num_ICs:int):
-    model_output = model.get_output(num_ICs, num_ICs, figsize=(10,10))
+def mode_densities(prefix:str, model, num_modes:int):
+    model_output = model.get_output()
     concatenated = np.concatenate(model_output)
-    fig, axes = plt.subplots
-    for i in range(num_ICs):
-        for j in range(num_ICs):
+    fig, axes = plt.subplots(num_modes, num_modes, figsize=(10,10))
+    for i in range(num_modes):
+        for j in range(num_modes):
             pyemma.plots.plot_density(concatenated[:,i], concatenated[:,j], ax=axes[i,j], cbar=True, alpha=0.1)
     fig.tight_layout()
     fig.savefig(prefix+'_IC_densities.png')
+
+def traj_IC_hist(prefix:str, model, num_modes:int):
+    model_output = model.get_output()
+    concat = np.concatenate(model_output)
+    fig, ax, misc = pyemma.plots.plot_feature_histograms(concat)
+    for i, mode in enumerate(['IC']*num_modes):
+        ax.plot(concat[:300, 1-i], np.linspace(-0.2+i,0.8+i,300), color='C2', alpha=0.6)
+        ax.annotate('${}$(time)'.format(mode), xy=(3, 0.6 + i), xytext=(3, i),
+                    arrowprops=dict(fc='C2', ec='None', alpha=0.6, width=2))
+        
+    fig.tight_layout()
+    fig.savefig(prefix+'_traj_IC_hist.png')
 
 
