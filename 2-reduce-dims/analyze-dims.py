@@ -151,6 +151,9 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
 
 timesteps = ftr_timestep*lag_list
 
+def generate_dim_labels(label_list:list, n_dims:int):
+    labels = [label+str(i) for label in label_list for i in range(n_dims)]
+    return labels
 
 def compare_reductions(prefix:str, pca_model, tica_model, vamp_model, n_dims:int):
     fig, axes = plt.subplots(figsize=(10, 10))
@@ -160,8 +163,9 @@ def compare_reductions(prefix:str, pca_model, tica_model, vamp_model, n_dims:int
     tica_concatenated = np.concatenate(tica_output)
     vamp_output = vamp_model.get_output()
     vamp_concatenated = np.concatenate(vamp_output)
-    pyemma.plots.plot_feature_histograms(np.concatenate([pca_concatenated, tica_concatenated, vamp_concatenated], axis=1), feature_labels=[
-                                         ['PCA']*n_dims, ['TICA']*n_dims, ['VAMP']*n_dims], ax=axes)
+    concat = np.concatenate([pca_concatenated, tica_concatenated, vamp_concatenated], axis=1)
+    print("shape concat: "+str(np.shape(concat)))
+    pyemma.plots.plot_feature_histograms(concat, feature_labels= generate_dim_labels(['PCA', 'TICA', 'VAMP'], n_dims=n_dims), ax=axes)
     fig.tight_layout()
     fig.savefig(prefix+'_ftr_hist.png')
 
