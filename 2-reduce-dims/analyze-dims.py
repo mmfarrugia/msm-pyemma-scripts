@@ -23,10 +23,12 @@ import sys
 config.show_progress_bars = False
 # iniital md resolution of 50 ps, or 0.05 ns, ftrzn stride of 4, so 200ps or 0.2ns resolution
 ftr_timestep = 0.200
-lag_list = [5, 10, 50, 500, 1000, 2000, 2400]
+lag_list = np.array([5, 10, 50, 500, 1000, 2000, 2400])
 
-ftrzn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/pyemma-msm/2-reduce-dims/'
+redn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/2-reduce-dims/'
+ftrzn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/1-featurization/'
 
+ftrzn_files = glob.glob(ftrzn_dir+'/200ps/torsions/*.npy')
 
 def heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw=None, cbarlabel="", **kwargs):
@@ -227,31 +229,39 @@ def subspace_timeseries(prefix:str, pca_concatenated, tica_concatenated, vamp_co
 def topN_features_hist(prefix:str):
     print()
 
+# set source
+source = pyemma.coordinates.source(ftrzn_files, allow_pickle=True)
 
+source_name = 'torsions'
 # Load pca model
-pcaprefix = 'pca_d10_torsions'
-pca = pyemma.load(ftrzn_dir+pcaprefix+'.model')
+pcaprefix = 'pca_d10_'+source_name
+pca = pyemma.load(redn_dir+pcaprefix+'.model')
+pca.data_producer = source
 
 # Load tICA and VAMP models at all timesteps
 tica = list()
 vamp = list()
 for timestep in timesteps:
-    param_prefix = 'd10_l_'+str(timestep)+'ns_torsions'
+    param_prefix = 'd10_l_'+str(timestep)+'ns_'+source_name
     tica_prefix = 'tica_'+param_prefix
-    tica.append(pyemma.load(ftrzn_dir+tica_prefix+'.model')) 
+    tica_model_ = pyemma.load(redn_dir+tica_prefix+'.model')
+    tica_model_.data_producer = source
+    tica.append(tica_model_) 
     vamp_prefix = 'vamp_'+param_prefix
-    vamp.append(pyemma.load(ftrzn_dir+vamp_prefix+'.model')) 
+    vamp_model_ = pyemma.load(redn_dir+vamp_prefix+'.model')
+    vamp_model_.data_producer = source
+    vamp.append(vamp_model_) 
 
     # Might as well run the comparative analyses which require all 3 while already iterating
-    compare_reductions(param_prefix, pca, tica, vamp, n_dims=4)
+    compare_reductions(param_prefix, pca, tica_model_, vamp_model_, n_dims=4)
 
 # Dimensional Analysis
 
 #pca_dim = dimensional_analysis('pca_d10', False, pca, 10)
 
-tica_dim = dimensional_analysis('tica_d10_torsions', True, tica, 10)
+tica_dim = dimensional_analysis('tica_d10_'+source_name, True, tica, 10)
 
-vamp_dim = dimensional_analysis('vamp_d10_torsions', False, vamp, 10)
+vamp_dim = dimensional_analysis('vamp_d10_'+source_name, False, vamp, 10)
 
 # Lag Analysis
 
@@ -262,8 +272,8 @@ vamp_dim = dimensional_analysis('vamp_d10_torsions', False, vamp, 10)
 # Mode Cross-sections Analysis
 
 mode_densities(pcaprefix, pca, 4)
-mode_densities('tica_d10_torsions', tica[5], 4)
-mode_densities('vamp_d10_torsions', vamp[5], 4)
+mode_densities('tica_d10_'+source_name, tica[5], 4)
+mode_densities('vamp_d10_'+source_name, vamp[5], 4)
 
 # mode_densities(pcaprefix, pca, pca_dim)
 # mode_densities(tica_prefix, tica[tica_lag], tica_dim)
@@ -273,9 +283,9 @@ mode_densities('vamp_d10_torsions', vamp[5], 4)
 
 traj_IC_hist(pcaprefix, pca, 4) 
 
-traj_IC_hist('tica_d10_torsions', tica[5], 4)
+traj_IC_hist('tica_d10_'+source_name, tica[5], 4)
 
-traj_IC_hist('vamp_d10_torsions', vamp[5], 4)
+traj_IC_hist('vamp_d10_'+source_name, vamp[5], 4)
 
 # traj_IC_hist(pcaprefix, pca, pca_dim) 
 # traj_IC_hist(tica_prefix, tica[tica_lag], tica_dim)

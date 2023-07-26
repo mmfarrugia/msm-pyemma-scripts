@@ -60,7 +60,9 @@ with open("jl2_ftr_labels.txt", "wb") as wfile:
 # load in trajectories
 #print( files)
 distances = pyemma.coordinates.load(files, top=prmtop, features=feats, stride = md_stride)
-np.save('ts2_jl1_ftrs.npy', distances)
+for i, traj in enumerate(distances):
+    np.save('ts2_jl1_ftrs_'+str(i)+'.npy', traj)
+
 print("distances")
 print('type of data:', type(distances))
 print('lengths:', len(distances))
@@ -68,7 +70,9 @@ print('shape of elements:', distances[0].shape)
 print('element example: ', distances[0])
 print('n_atoms:', feats.topology.n_atoms)
 distances2 = pyemma.coordinates.load(files, top=prmtop, features=feats2, stride = md_stride)
-np.save('ts2_jl2_ftrs.npy', distances2)
+for i, traj in enumerate(distances2):
+    np.save('ts2_jl2_ftrs_'+str(i)+'.npy', traj)
+#np.save('ts2_jl2_ftrs.npy', distances2)
 print("distances2")
 print('type of data:', type(distances2))
 print('lengths:', len(distances2))
@@ -81,14 +85,19 @@ labels+= ['Jinping Dist 2']
 torsions_feat = pyemma.coordinates.featurizer(prmtop)
 torsions_feat.add_backbone_torsions(cossin=True, periodic=False)
 phi_psi = pyemma.coordinates.load(files, features=torsions_feat, stride=md_stride)
-np.save('ts2_phi_psi_ftrs.npy', phi_psi)
+
+for i, traj in enumerate(phi_psi):
+    np.save('ts2_phi_psi_ftrs_'+str(i)+'.npy', traj)
+#np.save('ts2_phi_psi_ftrs.npy', phi_psi)
 
 with open("phi_psi_ftr_labels.txt", "wb") as wfile:
     pickle.dump(torsions_feat.describe(), wfile)
 
 torsions_feat.add_sidechain_torsions(cossin=True, periodic=False)
 torsions_data = pyemma.coordinates.load(files, features=torsions_feat, stride=md_stride)
-np.save('ts2_torsn_ftrs.npy', torsions_data)
+for i, traj in enumerate(torsions_data):
+    np.save('ts2_torsn_ftrs_'+str(i)+'.npy', traj)
+#np.save('ts2_torsn_ftrs.npy', torsions_data)
 print("torsions")
 print('type of data:', type(torsions_data))
 print('lengths:', len(torsions_data))
@@ -100,7 +109,9 @@ labels += ['torsions'] # backbone and sidechain
 positions_feat = pyemma.coordinates.featurizer(prmtop)
 positions_feat.add_selection(positions_feat.select_Backbone())
 positions_data = pyemma.coordinates.load(files, features=positions_feat, stride=md_stride)
-np.save('ts2_backbone_xyz_ftrs.npy', positions_data)
+for i, traj in enumerate([positions_data]):
+    np.save('ts2_backbone_xyz_ftrs_'+str(i)+'.npy', traj)
+#np.save('ts2_backbone_xyz_ftrs.npy', positions_data)
 print("backbone xyz")
 print('type of data:', type(positions_data))
 print('lengths:', len(positions_data))

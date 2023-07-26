@@ -23,7 +23,7 @@ import sys
 config.show_progress_bars = False
 ftr_timestep = 0.200 # iniital md resolution of 50 ps, or 0.05 ns, ftrzn stride of 4, so 200ps or 0.2ns resolution
 lag_list = [5, 10, 50, 500, 1000, 2000, 2400]
-dim_list = [2, 4, 5, 10, 0.95]
+dim_list = [2, 4, 10, 0.95]
 
 def heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw=None, cbarlabel="", **kwargs):
