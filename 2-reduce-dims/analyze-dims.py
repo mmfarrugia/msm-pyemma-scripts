@@ -161,7 +161,7 @@ def compare_reductions(prefix:str, pca_model, tica_model, vamp_model, n_dims:int
     vamp_output = vamp_model.get_output()
     vamp_concatenated = np.concatenate(vamp_output)
     pyemma.plots.plot_feature_histograms(np.concatenate([pca_concatenated, tica_concatenated, vamp_concatenated], axis=1), feature_labels=[
-                                         ['PCA']*n_dims, ['TICA']*n_dims, ['VAMP']*n_dims], ax=axes[0])
+                                         ['PCA']*n_dims, ['TICA']*n_dims, ['VAMP']*n_dims], ax=axes)
     fig.tight_layout()
     fig.savefig(prefix+'_ftr_hist.png')
 
