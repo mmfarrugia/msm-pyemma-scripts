@@ -23,7 +23,7 @@ import sys
 config.show_progress_bars = False
 # iniital md resolution of 50 ps, or 0.05 ns, ftrzn stride of 4, so 200ps or 0.2ns resolution
 ftr_timestep = 0.200
-lag_list = np.array([5, 10, 50, 500, 1000, 2000, 2400])
+lag_list = np.array([5, 10, 50, 500, 1000, 2000])#, 2400])
 
 redn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/2-reduce-dims/'
 ftrzn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/1-featurization/'
@@ -177,9 +177,11 @@ def dimensional_analysis(prefix, is_tica:bool, models, num_modes):
         color = 'C{}'.format(i)
         if(is_tica):
             #ax.fill_between(range(num_modes), models[i].timescales, )
-            ax.plot(range(num_modes), models[i].timescales, '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
+            print(str(models[i].timescales))
+            ax.plot(range(num_modes), models[i].timescales[:num_modes], '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
         else:
-            ax.plot(range(num_modes), models[i].scores, '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
+            print(models[i].scores)
+            ax.plot(range(num_modes), models[i].score, '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
 
     ax.legend()
     ax.set_xlabel('# of dimensions/modes')
@@ -258,7 +260,7 @@ for timestep in timesteps:
     vamp.append(vamp_model_) 
 
     # Might as well run the comparative analyses which require all 3 while already iterating
-    compare_reductions(param_prefix, pca, tica_model_, vamp_model_, n_dims=4)
+    #compare_reductions(param_prefix, pca, tica_model_, vamp_model_, n_dims=4)
 
 # Dimensional Analysis
 
