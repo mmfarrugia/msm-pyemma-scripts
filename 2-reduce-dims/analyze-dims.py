@@ -22,8 +22,9 @@ import sys
 
 config.show_progress_bars = False
 # iniital md resolution of 50 ps, or 0.05 ns, ftrzn stride of 4, so 200ps or 0.2ns resolution
-ftr_timestep = 0.200
+ftr_timestep = 0.200 # ns
 lag_list = np.array([5, 10, 50, 500, 1000, 2000])#, 2400])
+dim_list = [2, 4, 10]
 
 redn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/2-reduce-dims/'
 ftrzn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/1-featurization/'
@@ -173,19 +174,26 @@ def compare_reductions(prefix:str, pca_model, tica_model, vamp_model, n_dims:int
 
 def dimensional_analysis(prefix, is_tica:bool, models, num_modes):
     fig, ax = plt.subplots()
-    for i, timestep in enumerate(timesteps):
-        color = 'C{}'.format(i)
-        if(is_tica):
+    if is_tica:
+        for i, timestep in enumerate(timesteps):
+            color = 'C{}'.format(i)
             #ax.fill_between(range(num_modes), models[i].timescales, )
-            print(str(models[i].timescales))
-            ax.plot(range(num_modes), models[i].timescales[:num_modes], '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
-        else:
-            print(models[i].scores)
-            ax.plot(range(num_modes), models[i].score, '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
+            timescales = models[i].timescales[:num_modes]
+            scaled_timescales = timescales * ftr_timestep
+            print(str(scaled_timescales))
+            ax.plot(range(num_modes), scaled_timescales, '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
+        ax.set_xlabel('# of dimensions/modes')
+
+    else:
+        scores = np.array([[dim_models[i].score() for i in range(timesteps)] for dim_models in models])
+        print(str(np.shape(scores)))
+        for i, timestep in enumerate(timesteps):
+            color = 'C{}'.format(i)
+            ax.plot(dim_list, scores[:,i], '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
+            ax.set_xlabel("lag (ns)")
 
     ax.legend()
-    ax.set_xlabel('# of dimensions/modes')
-    ax.set_ylabel('Implied Timescales' if is_tica else 'VAMP2 Score')
+    ax.set_ylabel('Implied Timescales (ns)' if is_tica else 'VAMP2 Score')
     fig.tight_layout()
     fig.savefig(prefix+'_dim_analysis.png')
 
@@ -265,10 +273,20 @@ for timestep in timesteps:
 # Dimensional Analysis
 
 #pca_dim = dimensional_analysis('pca_d10', False, pca, 10)
+#tica_dim = dimensional_analysis('tica_d10_'+source_name, True, tica, 10)
 
-tica_dim = dimensional_analysis('tica_d10_'+source_name, True, tica, 10)
+vamp_all = list()
+for dim in dim_list:
+    vamp_dim = list()
+    for timestep in timesteps:
+        param_prefix = 'd'+str(dim)+'_l_'+str(timestep)+'ns_'+source_name
+        vamp_prefix = 'vamp_'+param_prefix
+        vamp_model_ = pyemma.load(redn_dir+vamp_prefix+'.model')
+        vamp_model_.data_producer = source
+        vamp_dim.append(vamp_model_)
+    vamp_all.append(vamp_dim)
 
-vamp_dim = dimensional_analysis('vamp_d10_'+source_name, False, vamp, 10)
+vamp_dim = dimensional_analysis('vamp_'+source_name, False, vamp_all, 10)
 
 # Lag Analysis
 
