@@ -59,7 +59,7 @@ def heatmap(data, row_labels, col_labels, ax=None,
     im = ax.imshow(data, aspect='auto', **kwargs)
 
     # Create colorbar
-    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    cbar = ax.figure.colorbar(im, ax=ax, vmin=-1.0, vmax=1.0, **cbar_kw)
     cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
 
     # Show all ticks and label them with the respective list entries.

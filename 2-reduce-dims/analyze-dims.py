@@ -23,13 +23,18 @@ import sys
 config.show_progress_bars = False
 # iniital md resolution of 50 ps, or 0.05 ns, ftrzn stride of 4, so 200ps or 0.2ns resolution
 ftr_timestep = 0.200 # ns
-lag_list = np.array([5, 10, 50, 500, 1000, 2000])#, 2400])
+lag_list = np.array([5, 10, 50, 500, 1000, 2000, 2400])
 dim_list = [2, 4, 10]
 
 redn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/2-reduce-dims/'
 ftrzn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/1-featurization/'
 
 ftrzn_files = glob.glob(ftrzn_dir+'/200ps/torsions/*.npy')
+
+# set source
+source = pyemma.coordinates.source(ftrzn_files, allow_pickle=True)
+
+source_name = 'torsions'
 
 def heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw=None, cbarlabel="", **kwargs):
@@ -90,7 +95,6 @@ def heatmap(data, row_labels, col_labels, ax=None,
 
     return im, cbar
 
-
 def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
                      textcolors=("black", "white"),
                      threshold=None, **textkw):
@@ -149,7 +153,6 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
 
     return texts
 
-
 timesteps = ftr_timestep*lag_list
 
 def generate_dim_labels(label_list:list, n_dims:int):
@@ -157,7 +160,11 @@ def generate_dim_labels(label_list:list, n_dims:int):
     print(labels)
     return labels
 
+def generate_prefix(data_label:str, dim:int, timestep:int, model_type:str):
+    return model_type+'_d'+str(dim)+'_l_'+str(timestep)+'ns_'+data_label
+
 def compare_reductions(prefix:str, pca_model, tica_model, vamp_model, n_dims:int):
+    if n_dims > 5: n_dims = 5 
     fig, axes = plt.subplots(figsize=(10, 10))
     pca_output = pca_model.get_output()
     pca_concatenated = np.concatenate(pca_output)
@@ -172,7 +179,8 @@ def compare_reductions(prefix:str, pca_model, tica_model, vamp_model, n_dims:int
     fig.savefig(prefix+'_ftr_hist.png')
 
 
-def dimensional_analysis(prefix, is_tica:bool, models, num_modes):
+def dimensional_analysis(prefix:str, is_tica:bool, models, num_modes:int):
+    if num_modes > 15: num_modes = 15
     fig, ax = plt.subplots()
     if is_tica:
         for i, timestep in enumerate(timesteps):
@@ -185,7 +193,9 @@ def dimensional_analysis(prefix, is_tica:bool, models, num_modes):
         ax.set_xlabel('# of dimensions/modes')
 
     else:
-        scores = np.array([[dim_models[i].score() for i in range(timesteps)] for dim_models in models])
+#        print('dim_models list\n'+str([dim_models for dim_models in models]))
+#        print('nested\n'+str([[dim_models[i] for i in range(len(timesteps))] for dim_models in models]))
+        scores = np.array([[dim_models[i].score() for i in range(len(timesteps))] for dim_models in models])
         print(str(np.shape(scores)))
         for i, timestep in enumerate(timesteps):
             color = 'C{}'.format(i)
@@ -207,19 +217,22 @@ def lag_analysis(model):
 
 
 def mode_densities(prefix:str, model, num_modes:int):
+    # density maps of different combinations of modes
+    if num_modes > 5: num_modes = 5
     model_output = model.get_output()
     concatenated = np.concatenate(model_output)
-    fig, axes = plt.subplots(num_modes, num_modes, figsize=(10,10))
+    fig, axes = plt.subplots(num_modes, num_modes-1, figsize=(15,12))
     for i in range(num_modes):
-        for j in range(num_modes):
-            pyemma.plots.plot_density(concatenated[:,i], concatenated[:,j], ax=axes[i,j], cbar=True, alpha=0.1)
+        for j in range(num_modes-i):
+            pyemma.plots.plot_density(concatenated[:,i], concatenated[:,j], ax=axes[i,j-1], cbar=True, alpha=0.1)
     fig.tight_layout()
     fig.savefig(prefix+'_IC_densities.png')
 
 def traj_IC_hist(prefix:str, model, num_modes:int):
+    if num_modes > 15: num_modes = 15
     model_output = model.get_output()
     concat = np.concatenate(model_output)
-    fig, ax, misc = pyemma.plots.plot_feature_histograms(concat)
+    fig, ax = pyemma.plots.plot_feature_histograms(concat)
     for i, mode in enumerate(['IC']*num_modes):
         ax.plot(concat[:300, 1-i], np.linspace(-0.2+i,0.8+i,300), color='C2', alpha=0.6)
         ax.annotate('${}$(time)'.format(mode), xy=(3, 0.6 + i), xytext=(3, i),
@@ -244,14 +257,43 @@ def subspace_timeseries(prefix:str, pca_concatenated, tica_concatenated, vamp_co
 def topN_features_hist(prefix:str):
     print()
 
-# set source
-source = pyemma.coordinates.source(ftrzn_files, allow_pickle=True)
+def load_model(data_label:str, dim:int, timestep:int, model_type:str):
+    prefix = generate_prefix(data_label=data_label, dim=dim, timestep=time, model_type=model_type)
+    model = pyemma.load(redn_dir+prefix+'.model')
+    model.data_producer = source
+    return model, prefix
 
-source_name = 'torsions'
+def load_models(data_label:str, dims=None, times=None, model_types=None):
+    if dims is None:
+        dims = dim_list
+    if times is None:
+        times=timesteps
+    if model_types is None:
+        model_types = ['pca', 'tica', 'vamp']
+    models = dict()
+    for dim in dims:
+        for time in times:
+            for model_type in model_types:
+                model, prefix = load_model(data_label=data_label, dim=dim, timestep=time, model_type=model_type)
+                models[prefix] = model
+    return models
+
+def load_all_models():
+    files = glob.glob(redn_dir+'/*.model')
+    models = dict()
+    for file in files:
+        model =pyemma.load(file)
+        model.data_producer = source
+        models[file[:-6]] = model
+    return models
+
 # Load pca model
 pcaprefix = 'pca_d10_'+source_name
 pca = pyemma.load(redn_dir+pcaprefix+'.model')
 pca.data_producer = source
+
+# Mode Cross-sections Analysis
+mode_densities(pcaprefix, pca, 4)
 
 # Load tICA and VAMP models at all timesteps
 tica = list()
@@ -267,50 +309,41 @@ for timestep in timesteps:
     vamp_model_.data_producer = source
     vamp.append(vamp_model_) 
 
-    # Might as well run the comparative analyses which require all 3 while already iterating
-    #compare_reductions(param_prefix, pca, tica_model_, vamp_model_, n_dims=4)
+    # Might as well run the analyses which require iterating
+    compare_reductions(param_prefix, pca, tica_model_, vamp_model_, n_dims=4)
+    mode_densities(tica_prefix, tica_model_, 4)
+    mode_densities(vamp_prefix, vamp_model_, 4)
+
 
 # Dimensional Analysis
 
 #pca_dim = dimensional_analysis('pca_d10', False, pca, 10)
-#tica_dim = dimensional_analysis('tica_d10_'+source_name, True, tica, 10)
+tica_dim = dimensional_analysis('tica_d10_'+source_name, True, tica, 10)
+def run_vamp_dim_analysis():
+    vamp_all = list()
+    for dim in dim_list:
+        vamp_dim = list()
+        for timestep in timesteps:
+            param_prefix = 'd'+str(dim)+'_l_'+str(timestep)+'ns_'+source_name
+            vamp_prefix = 'vamp_'+param_prefix
+            vamp_model_ = pyemma.load(redn_dir+vamp_prefix+'.model')
+            vamp_model_.data_producer = source
+            vamp_dim.append(vamp_model_)
+        vamp_all.append(vamp_dim)
 
-vamp_all = list()
-for dim in dim_list:
-    vamp_dim = list()
-    for timestep in timesteps:
-        param_prefix = 'd'+str(dim)+'_l_'+str(timestep)+'ns_'+source_name
-        vamp_prefix = 'vamp_'+param_prefix
-        vamp_model_ = pyemma.load(redn_dir+vamp_prefix+'.model')
-        vamp_model_.data_producer = source
-        vamp_dim.append(vamp_model_)
-    vamp_all.append(vamp_dim)
-
-vamp_dim = dimensional_analysis('vamp_'+source_name, False, vamp_all, 10)
+    vamp_dim = dimensional_analysis('vamp_'+source_name, False, vamp_all, 10)
 
 # Lag Analysis
 
 #tica_lag = lag_analysis()
-
 #vamp_lag = lag_analysis()
 
-# Mode Cross-sections Analysis
-
-mode_densities(pcaprefix, pca, 4)
-mode_densities('tica_d10_'+source_name, tica[5], 4)
-mode_densities('vamp_d10_'+source_name, vamp[5], 4)
-
-# mode_densities(pcaprefix, pca, pca_dim)
-# mode_densities(tica_prefix, tica[tica_lag], tica_dim)
-# mode_densities(vamp_prefix, vamp[vamp_lag], vamp_dim)
 
 # IC histogram of time spent with trajectory paths overlaid
 
 traj_IC_hist(pcaprefix, pca, 4) 
-
 traj_IC_hist('tica_d10_'+source_name, tica[5], 4)
-
-traj_IC_hist('vamp_d10_'+source_name, vamp[5], 4)
+traj_IC_hist('vamp_d10_'+source_name, vamp[4], 4)
 
 # traj_IC_hist(pcaprefix, pca, pca_dim) 
 # traj_IC_hist(tica_prefix, tica[tica_lag], tica_dim)
