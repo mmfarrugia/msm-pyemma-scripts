@@ -177,7 +177,7 @@ def compare_reductions(prefix:str, pca_model, tica_model, vamp_model, n_dims:int
     pyemma.plots.plot_feature_histograms(concat, feature_labels= generate_dim_labels(['PCA', 'TICA', 'VAMP'], n_dims=n_dims), ax=axes)
     fig.tight_layout()
     fig.savefig(prefix+'_ftr_hist.png')
-
+    plt.close()
 
 def dimensional_analysis(prefix:str, is_tica:bool, models, num_modes:int):
     if num_modes > 15: num_modes = 15
@@ -206,7 +206,7 @@ def dimensional_analysis(prefix:str, is_tica:bool, models, num_modes:int):
     ax.set_ylabel('Implied Timescales (ns)' if is_tica else 'VAMP2 Score')
     fig.tight_layout()
     fig.savefig(prefix+'_dim_analysis.png')
-
+    plt.close()
     return -1
         
 
@@ -227,32 +227,35 @@ def mode_densities(prefix:str, model, num_modes:int):
             pyemma.plots.plot_density(concatenated[:,i], concatenated[:,j], ax=axes[i,j-1], cbar=True, alpha=0.1)
     fig.tight_layout()
     fig.savefig(prefix+'_IC_densities.png')
+    plt.close()
 
 def traj_IC_hist(prefix:str, model, num_modes:int):
-    if num_modes > 15: num_modes = 15
+    if num_modes > 5: num_modes = 5
     model_output = model.get_output()
     concat = np.concatenate(model_output)
-    fig, ax = pyemma.plots.plot_feature_histograms(concat)
+    fig, ax = pyemma.plots.plot_feature_histograms(concat[:,:num_modes])
     for i, mode in enumerate(['IC']*num_modes):
-        ax.plot(concat[:300, 1-i], np.linspace(-0.2+i,0.8+i,300), color='C2', alpha=0.6)
+        ax.plot(concat[:, num_modes - 1 - i], np.linspace(-0.2+i,0.8+i,50000), color='C2', alpha=0.6)
         ax.annotate('${}$(time)'.format(mode), xy=(3, 0.6 + i), xytext=(3, i),
                     arrowprops=dict(fc='C2', ec='None', alpha=0.6, width=2))
         
     fig.tight_layout()
     fig.savefig(prefix+'_traj_IC_hist.png')
+    plt.close()
 
 def subspace_timeseries(prefix:str, pca_concatenated, tica_concatenated, vamp_concatenated):
     #NOTE: concatenated input should also just be within the subspace to visualize, so already a singular dimension's values (vector basically)
     fig, ax = plt.subplots(figsize=(10,3))
-    ax.plot(pca_concatenated[:300], label='PCA')
-    ax.plot(tica_concatenated[:300], label='TICA')
+    ax.plot(pca_concatenated, label='PCA')
+    ax.plot(tica_concatenated, label='TICA')
     # check directionality of VAMP for easier visualization
-    ax.plot(vamp_concatenated[:300], label='VAMP')
+    ax.plot(vamp_concatenated, label='VAMP')
     ax.set_xlabel('time / steps')
     ax.set_ylabel('mode values')
     ax.legend()
     fig.tight_layout()
-    fig.savefig(prefix+'.png')
+    fig.savefig(prefix+'_subspace_timeseries.png')
+    plt.close()
 
 def topN_features_hist(prefix:str):
     print()
@@ -344,6 +347,15 @@ def run_vamp_dim_analysis():
 traj_IC_hist(pcaprefix, pca, 4) 
 traj_IC_hist('tica_d10_'+source_name, tica[5], 4)
 traj_IC_hist('vamp_d10_'+source_name, vamp[4], 4)
+
+tica_5 = tica[5].get_output()
+tica_5 = np.concatenate(tica_5)
+tic_1 = tica_5[:,0]
+
+vamp_5 = vamp[5].get_output()
+vamp_5 = np.concatenate(vamp_5)
+
+subspace_timeseries('400ns_dim_1_of_10_torsion_', pca, tica_5[:,0], vamp_5[:,0])
 
 # traj_IC_hist(pcaprefix, pca, pca_dim) 
 # traj_IC_hist(tica_prefix, tica[tica_lag], tica_dim)
