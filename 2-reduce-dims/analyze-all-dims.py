@@ -17,6 +17,7 @@ import time
 import pickle
 import heapq
 import sys
+from collections import defaultdict
 
 # sys.path.insert(0, '/scratch365/mfarrugi/HMGR/500ns/analysis/msm-pyemma-scripts/')
 
@@ -24,7 +25,6 @@ config.show_progress_bars = False
 # iniital md resolution of 50 ps, or 0.05 ns, ftrzn stride of 4, so 200ps or 0.2ns resolution
 ftr_timestep = 0.200 # ns
 lag_list = np.array([5, 10, 50, 500, 1000, 2000, 2400])
-dim_list = [2, 4, 10]
 
 redn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/2-reduce-dims/'
 ftrzn_dir = '/scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/1-featurization/'
@@ -160,7 +160,7 @@ def generate_dim_labels(label_list:list, n_dims:int):
     print(labels)
     return labels
 
-def generate_prefix(data_label:str, dim:int, timestep, model_type:str):
+def generate_prefix(data_label:str, dim:int, timestep:int, model_type:str):
     return model_type+'_d'+str(dim)+'_l_'+str(timestep)+'ns_'+data_label
 
 def compare_reductions(prefix:str, pca_model, tica_model, vamp_model, n_dims:int):
@@ -179,7 +179,7 @@ def compare_reductions(prefix:str, pca_model, tica_model, vamp_model, n_dims:int
     fig.savefig(prefix+'_ftr_hist.png')
     plt.close()
 
-def dimensional_analysis(prefix:str, is_tica:bool, models, num_modes:int):
+def dimensional_analysis(prefix:str, is_tica:bool, models, num_modes:int, mode_list):
     if num_modes > 15: num_modes = 15
     fig, ax = plt.subplots()
     if is_tica:
@@ -199,7 +199,7 @@ def dimensional_analysis(prefix:str, is_tica:bool, models, num_modes:int):
         print(str(np.shape(scores)))
         for i, timestep in enumerate(timesteps):
             color = 'C{}'.format(i)
-            ax.plot(dim_list, scores[:,i], '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
+            ax.plot(mode_list, scores[:,i], '--o', color=color, label='lag={:.1f}ns'.format(timesteps[i]))
             ax.set_xlabel("lag (ns)")
 
     ax.legend()
@@ -209,12 +209,10 @@ def dimensional_analysis(prefix:str, is_tica:bool, models, num_modes:int):
     plt.close()
     return -1
         
-
 def lag_analysis(model):
     for i, timestep in enumerate(timesteps):
         print()
     return -1 # Return index of chosen lag time within timesteps/lag_list
-
 
 def mode_densities(prefix:str, model, num_modes:int):
     # density maps of different combinations of modes
@@ -268,7 +266,7 @@ def load_model(data_label:str, dim:int, timestep:int, model_type:str):
 
 def load_models(data_label:str, dims=None, times=None, model_types=None):
     if dims is None:
-        dims = dim_list
+        dims = [10]
     if times is None:
         times=timesteps
     if model_types is None:
@@ -290,75 +288,62 @@ def load_all_models():
         models[file[:-6]] = model
     return models
 
-# Load pca model
-pcaprefix = 'pca_d10_'+source_name
-pca = pyemma.load(redn_dir+pcaprefix+'.model')
-pca.data_producer = source
 
-# Mode Cross-sections Analysis
-mode_densities(pcaprefix, pca, 4)
+all_models = load_all_models()
 
-# Load tICA and VAMP models at all timesteps
-tica = list()
-vamp = list()
-for timestep in timesteps:
-    param_prefix = 'd10_l_'+str(timestep)+'ns_'+source_name
-    tica_prefix = 'tica_'+param_prefix
-    tica_model_ = pyemma.load(redn_dir+tica_prefix+'.model')
-    tica_model_.data_producer = source
-    tica.append(tica_model_) 
-    vamp_prefix = 'vamp_'+param_prefix
-    vamp_model_ = pyemma.load(redn_dir+vamp_prefix+'.model')
-    vamp_model_.data_producer = source
-    vamp.append(vamp_model_) 
+pca_models = dict()
+tica_models = dict()
+vamp_models = dict()
+models_by_dim = defaultdict(list)
+models_by_timestep = defaultdict(list)
+#models_by_ftr = defaultdict(list)
 
-    # Might as well run the analyses which require iterating
-    compare_reductions(param_prefix, pca, tica_model_, vamp_model_, n_dims=4)
-    mode_densities(tica_prefix, tica_model_, 4)
-    mode_densities(vamp_prefix, vamp_model_, 4)
+for key, model in all_models.items():
+    if 'pca' in key:
+        pca_models[key] = model
+    elif 'tica' in key:
+        tica_models[key] = model
+    elif 'vamp' in key:
+        vamp_models[key] = model
+    d_index = key.index('_d', 0, 11)
+    l_index = key.index('_l_')
+    ns_index = key.index('ns', l_index)
+    #end_index = key.index('.model')
+    dim = int(key[d_index+2:l_index])
+    models_by_dim[dim].append(model)
+    timestep = key[l_index+3:ns_index]
+    models_by_timestep[timestep].append(model)
+    #data_label = key[ns_index+3:end_index]
+    #models_by_ftr[data_label] = model
 
-
-# Dimensional Analysis
-
-#pca_dim = dimensional_analysis('pca_d10', False, pca, 10)
-tica_dim = dimensional_analysis('tica_d10_'+source_name, True, tica, 10)
-def run_vamp_dim_analysis():
-    vamp_all = list()
-    for dim in dim_list:
-        vamp_dim = list()
-        for timestep in timesteps:
-            param_prefix = 'd'+str(dim)+'_l_'+str(timestep)+'ns_'+source_name
-            vamp_prefix = 'vamp_'+param_prefix
-            vamp_model_ = pyemma.load(redn_dir+vamp_prefix+'.model')
-            vamp_model_.data_producer = source
-            vamp_dim.append(vamp_model_)
-        vamp_all.append(vamp_dim)
-
-    vamp_dim = dimensional_analysis('vamp_'+source_name, False, vamp_all, 10)
-
-# Lag Analysis
-
-#tica_lag = lag_analysis()
-#vamp_lag = lag_analysis()
+    mode_densities(key, model, num_modes=dim)
+    traj_IC_hist(key, model, dim)
 
 
-# IC histogram of time spent with trajectory paths overlaid
+#tica_10_keys = [key for key in tica_models.keys if key.contains('d10')]
+dimensional_analysis('tica_d10_'+source_name, True, [tica_models[key] for key in tica_models.keys if key.contains('d10')], 10, models_by_dim.keys)
+dimensional_analysis('vamp_'+source_name, False, vamp_models.values, 10, models_by_dim.keys)
 
-pca_concat = np.concatenate(pca.get_output())
 
-traj_IC_hist(pcaprefix, pca, 4) 
-traj_IC_hist('tica_d10_'+source_name, tica[5], 4)
-traj_IC_hist('vamp_d10_'+source_name, vamp[4], 4)
+for dim in models_by_dim.keys:
+   for timestep in models_by_timestep.keys:
+        subset = models_by_timestep[timestep] & models_by_dim[dim]
+        print(subset)
+        compare_reductions("d"+str(dim)+'_l_'+str(timestep)+'ns_'+source_name, *subset, dim)
 
-tica_5 = tica[5].get_output()
-tica_5 = np.concatenate(tica_5)
-tic_1 = tica_5[:,0]
+for prefix in all_models.keys:
+    if prefix.contains('d10'):
+        pca_data = np.concatenate(pca_models[prefix].get_output())
+        tica_data = np.concatenate(tica_models[prefix].get_output())
+        vamp_data = np.concatenate(vamp_models[prefix].get_output())
+        for d in range(5):
+            subspace_timeseries(prefix, pca_data[:,d], tica_data[:,d], vamp_data[:,d])
 
-vamp_5 = vamp[5].get_output()
-vamp_5 = np.concatenate(vamp_5)
 
-subspace_timeseries('400ns_dim_1_of_10_torsion_', pca_concat[:,0], tica_5[:,0], vamp_5[:,0])
 
-# traj_IC_hist(pcaprefix, pca, pca_dim) 
-# traj_IC_hist(tica_prefix, tica[tica_lag], tica_dim)
-# traj_IC_hist(vamp_prefix, vamp[vamp_lag], vamp_dim)
+
+
+
+
+
+
