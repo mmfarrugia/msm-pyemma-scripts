@@ -344,6 +344,8 @@ def run_vamp_dim_analysis():
 
 # IC histogram of time spent with trajectory paths overlaid
 
+pca_concat = np.concatenate(pca.get_output())
+
 traj_IC_hist(pcaprefix, pca, 4) 
 traj_IC_hist('tica_d10_'+source_name, tica[5], 4)
 traj_IC_hist('vamp_d10_'+source_name, vamp[4], 4)
@@ -355,7 +357,7 @@ tic_1 = tica_5[:,0]
 vamp_5 = vamp[5].get_output()
 vamp_5 = np.concatenate(vamp_5)
 
-subspace_timeseries('400ns_dim_1_of_10_torsion_', pca, tica_5[:,0], vamp_5[:,0])
+subspace_timeseries('400ns_dim_1_of_10_torsion_', pca_concat[:,0], tica_5[:,0], vamp_5[:,0])
 
 # traj_IC_hist(pcaprefix, pca, pca_dim) 
 # traj_IC_hist(tica_prefix, tica[tica_lag], tica_dim)
