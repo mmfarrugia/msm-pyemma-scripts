@@ -4,8 +4,9 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 #from msm_pyemma_scripts.plot_helpers import heatmap, annotate_heatmap
-import numpy as np
+
 import mdshare
+import numpy as np
 import pyemma
 from pyemma import config
 from pyemma.util.contexts import settings
@@ -59,7 +60,7 @@ def heatmap(data, row_labels, col_labels, ax=None,
     im = ax.imshow(data, aspect='auto', **kwargs)
 
     # Create colorbar
-    cbar = ax.figure.colorbar(im, ax=ax, vmin=-1.0, vmax=1.0, **cbar_kw)
+    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
     cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
 
     # Show all ticks and label them with the respective list entries.
@@ -174,13 +175,18 @@ def mode_ftr_analysis(ftr_corr, prefix:str, data_labels, cutoff0 = 0.9, cutoff=0
 
     im, cbar = heatmap(np.array(unique_vals), unique_labels, range(num_modes), ax=ax, cbarlabel="contribution")
     texts = annotate_heatmap(im, np.array(unique_vals), valfmt="{x:.1f}")
+#    plt.clim(-1,1)
     fig.tight_layout()
     plt.show()
-
-    #ax.imshow(top_vals, cmap='bwr', vmin=-1, vmax=1, aspect='auto')
+    #plt.clim(-1,1)
+    cbar = fig.colorbar(im, ax=ax) # added
+    cbar.set_ticks([-1.0,0.0, 1.0])
+    cbar.draw_all()
+    ax.imshow(top_vals, cmap='bwr', vmin=-1, vmax=1, aspect='auto')
 
 
     fig.savefig(prefix+'_modes.png')
+
 
     fig.clear()
     plt.cla()
@@ -213,7 +219,7 @@ def vamp_sv_analysis(left_singular_vectors, prefix:str, data_labels, topN=None, 
         #top_indices.append()
 
     unique_indices = np.unique(top_indices)
-    unique_vals = [ftr_corr[i,:] for i in unique_indices]
+    unique_vals = [left_singular_vectors[i,:] for i in unique_indices]
     unique_labels = [data_labels[i] for i in unique_indices]
 
 
@@ -307,25 +313,25 @@ files = glob.glob(ftrzn_dir+'/200ps/*.npy')
 
 # TORSIONS
 
-torsions = np.load(ftrzn_dir+'/200ps/ts2_torsn_ftrs.npy', allow_pickle=True)
-with open(ftrzn_dir+'/200ps/torsion_ftr_labels.txt', "rb") as f:
-    torsion_labels = pickle.load(f)
-torsions = list(torsions)
-torsions_concatenated = np.concatenate(torsions)
+#torsions = np.load(ftrzn_dir+'/200ps/ts2_torsn_ftrs.npy', allow_pickle=True)
+#with open(ftrzn_dir+'/200ps/torsion_ftr_labels.txt', "rb") as f:
+#    torsion_labels = pickle.load(f)
+#torsions = list(torsions)
+#torsions_concatenated = np.concatenate(torsions)
 
 #print("torsions concat shape: "+str(np.shape(torsions_concatenated)))
-torsions_T = np.asarray(torsions_concatenated).T
+#torsions_T = np.asarray(torsions_concatenated).T
 #print("torsions_T \n"+str(torsions_T))
 #print("shape "+str(np.shape(torsions_T)))
 #print("lens "+str(len(torsions_T))+" "+str(len(torsions_T[0])))
 
-run_pca(torsions, 'torsions', data_labels = torsion_labels, dims=10)
-run_pca(torsions, 'torsions', data_labels= torsion_labels, dims=0.70)
+#run_pca(torsions, 'torsions', data_labels = torsion_labels, dims=10)
+#run_pca(torsions, 'torsions', data_labels= torsion_labels, dims=0.70)
 
-for dim_item in dim_list:
-    for lag_item in lag_list:
-        run_tica(torsions, 'torsions', data_labels = torsion_labels, dims=dim_item, lag=lag_item)
-        run_vamp(torsions, 'torsions', data_labels = torsion_labels, dims=dim_item, lag=lag_item)
+#for dim_item in dim_list:
+#    for lag_item in lag_list:
+#        run_tica(torsions, 'torsions', data_labels = torsion_labels, dims=dim_item, lag=lag_item)
+#        run_vamp(torsions, 'torsions', data_labels = torsion_labels, dims=dim_item, lag=lag_item)
 #run_pca(torsions, 0.6, 'torsions', data_labels = torsion_labels)
 
 # DISTANCES

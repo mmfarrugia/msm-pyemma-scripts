@@ -13,4 +13,4 @@ which python
 
 cd /scratch365/mfarrugi/HMGR/500ns/analysis/msm_pyemma_scripts/2-reduce-dims
 
-python analyze-dims.py > analyze-dims.out
+python analyze-all-dims.py > analyze-all-dims.out
